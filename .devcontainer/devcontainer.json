@@ -1,16 +1,22 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/php
 {
-“name”: “WordPress Development Environment”,
-“image”: “mcr.microsoft.com/vscode/devcontainers/php:7.4”,
-“postCreateCommand”: “echo ‘Setting up WordPress'”,
-“features”: {
-“docker-in-docker”: “latest”
-},
-“customizations”: {
-“vscode”: {
-“extensions”: [
-“felixfbecker.php-debug”,
-“ms-azuretools.vscode-docker”
-]
-}
-}
+	"name": "PHP",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/php:3-8.4-bookworm",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [
+		8080
+	],
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	},
+ 	 "postStartCommand": "bash .devcontainer/start.sh"
 }

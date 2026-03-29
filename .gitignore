@@ -1,0 +1,30 @@
+# Docker local data
+docker-data/
+
+# WordPress
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/backup-db/
+wp-content/advanced-cache.php
+wp-content/wp-cache-config.php
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Node (if you have a build step)
+node_modules/
+dist/
+
+# Composer (if using PHP dependencies)
+/vendor/
+
+# Logs
+*.log
