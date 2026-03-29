@@ -1,0 +1,16 @@
+{
+“name”: “WordPress Development Environment”,
+“image”: “mcr.microsoft.com/vscode/devcontainers/php:7.4”,
+“postCreateCommand”: “echo ‘Setting up WordPress'”,
+“features”: {
+“docker-in-docker”: “latest”
+},
+“customizations”: {
+“vscode”: {
+“extensions”: [
+“felixfbecker.php-debug”,
+“ms-azuretools.vscode-docker”
+]
+}
+}
+}
