@@ -9,6 +9,9 @@ docker rm   wordpress wordpressdb 2>/dev/null || true
 mkdir -p ./docker-data/mysql ./docker-data/wordpress
 docker network create wordpress-network 2>/dev/null || true
 
+PLUGIN_NAME=$(basename "$GITHUB_REPOSITORY")
+SITE_URL="https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
+
 # ── Database ───────────────────────────────────────────────────────────────────
 docker run --name wordpressdb \
   --network wordpress-network \
@@ -17,20 +20,20 @@ docker run --name wordpressdb \
   -v "$(pwd)/docker-data/mysql:/var/lib/mysql" \
   -d mariadb:lts
 
-# ── Wait for MySQL ─────────────────────────────────────────────────────────────
-echo "Waiting for MySQL to initialize..."
-until docker exec wordpressdb mysqladmin ping -h localhost -proot --silent 2>/dev/null; do
-  echo "  MySQL starting... retrying in 2s"
+# ── Wait for MariaDB ───────────────────────────────────────────────────────────
+echo "Waiting for MariaDB to initialize..."
+until docker exec wordpressdb mariadb -uroot -proot -e "SELECT 1" &>/dev/null; do
+  echo "  MariaDB starting... retrying in 2s"
   sleep 2
 done
-echo "MySQL is up!"
+echo "MariaDB is up!"
 
 # ── WordPress ──────────────────────────────────────────────────────────────────
 docker run --name wordpress \
   --network wordpress-network \
   -p 8080:80 \
   -v "$(pwd)/docker-data/wordpress:/var/www/html" \
-  -v "$(pwd):/var/www/html/wp-content/plugins/$(basename "$GITHUB_REPOSITORY")" \
+  -v "$(pwd):/var/www/html/wp-content/plugins/${PLUGIN_NAME}" \
   -e WORDPRESS_DB_HOST=wordpressdb \
   -e WORDPRESS_DB_USER=root \
   -e WORDPRESS_DB_PASSWORD=root \
@@ -52,11 +55,29 @@ docker run --name wordpress \
 
     define('FORCE_SSL_ADMIN', true);
   " \
-  -d wordpress:php8.3-alpine
+  -d wordpress:php8.3-apache
+
+# ── Wait for WordPress ─────────────────────────────────────────────────────────
+echo "Waiting for WordPress to initialize..."
+until docker exec wordpress curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -qE "^(200|301|302|404)"; do
+  echo "  WordPress starting... retrying in 2s"
+  sleep 2
+done
+echo "WordPress is up!"
+
+# ── Install WP-CLI ─────────────────────────────────────────────────────────────
+echo "Installing WP-CLI..."
+docker exec wordpress curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+docker exec wordpress chmod +x wp-cli.phar
+docker exec wordpress mv wp-cli.phar /usr/local/bin/wp
+
+# ── Fix URLs in DB (handles Codespace restarts with new URL) ───────────────────
+echo "Updating site URL in database..."
+docker exec wordpress wp option update siteurl "$SITE_URL" --allow-root 2>/dev/null || true
+docker exec wordpress wp option update home    "$SITE_URL" --allow-root 2>/dev/null || true
 
 # ── Done ───────────────────────────────────────────────────────────────────────
 echo ""
-echo "✅ WordPress is starting up!"
-echo "🌐 Visit: https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
-echo ""
-echo "Note: WordPress may take 15–20s on first boot to unpack core files."
+echo "✅ WordPress is ready!"
+echo "🔌 Plugin folder: wp-content/plugins/${PLUGIN_NAME}"
+echo "🌐 Visit: ${SITE_URL}"
