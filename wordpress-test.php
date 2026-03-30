@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WordPress Codespace
- * Plugin URI:  https://github.com/pjd199/wordpress-test
+ * Plugin URI:  https://github.com/pjd199/wordpress-codespace
  * Description: A simple test plugin to verify the Codespace development environment is working.
  * Version:     1.0.0
  * Author:      pjd199
