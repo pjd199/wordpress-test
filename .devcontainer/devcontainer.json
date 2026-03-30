@@ -1,22 +1,11 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/php
 {
-	"name": "PHP",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/php:3-8.4-bookworm",
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-
-	// Configure tool-specific properties.
-	// "customizations": {},
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [
-		8080
-	],
-	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
-	},
- 	 "postStartCommand": "bash .devcontainer/start.sh"
+  "name": "WordPress Development Codespace",
+  "postCreateCommand": "chmod +x start.sh",
+  "postStartCommand": "bash start.sh",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": { "label": "WordPress", "onAutoForward": "openBrowserOnce" }
+  }
 }
