@@ -1,0 +1,8 @@
+{
+  "core": "https://wordpress.org/latest.zip",
+  "plugins": [ "." ],
+  "config": {
+    "WP_DEBUG": true,
+    "SCRIPT_DEBUG": true
+  }
+}
