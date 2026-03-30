@@ -2,8 +2,8 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/php
 {
   "name": "WordPress Development Codespace",
-  "postCreateCommand": "chmod +x dev.sh",
-  "postStartCommand": "bash dev.sh start",
+  "postCreateCommand": "chmod +x wordpress.sh",
+  "postStartCommand": "bash wordpress.sh start",
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": { "label": "WordPress", "onAutoForward": "openBrowserOnce" }

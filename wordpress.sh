@@ -7,19 +7,21 @@ WORDPRESS_DOCKER_IMAGE="wordpress:6.9.4"
 WORDPRESS_USER="admin"
 WORDPRESS_PASSWORD="password"
 PLUGIN_NAME=$(basename "$GITHUB_REPOSITORY")
-SITE_URL="https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
+
+# ── Script Version ────────────────────────────────────────────────────────────
+CURRENT_VERSION="0.0.2"
 
 case $1 in
   start)
-        # ── Cleanup ────────────────────────────────────────────────────────────────────
+        # ── Cleanup ────────────────────────────────────────────────────────────
         docker stop wordpress wordpressdb 2>/dev/null || true
         docker rm   wordpress wordpressdb 2>/dev/null || true
 
-        # ── Prep ───────────────────────────────────────────────────────────────────────
+        # ── Prep ───────────────────────────────────────────────────────────────
         mkdir -p ./docker-data/mariadb ./docker-data/wordpress
         docker network create wordpress-network 2>/dev/null || true
 
-        # ── Database ───────────────────────────────────────────────────────────────────
+        # ── Database ───────────────────────────────────────────────────────────
         docker run --name wordpressdb \
         --network wordpress-network \
         -e MYSQL_ROOT_PASSWORD=root \
@@ -28,7 +30,7 @@ case $1 in
         -d $MARIADB_DOCKER_IMAGE
 
 
-        # ── Wait for MySQL ───────────────────────────────────────────────────────────
+        # ── Wait for MySQL ─────────────────────────────────────────────────────
         echo "Waiting for MariaDB to initialize..."
         until docker exec wordpressdb mariadb -uroot -proot -e "SELECT 1" &>/dev/null; do
         echo "  MariaDB starting... retrying in 2s"
@@ -36,7 +38,7 @@ case $1 in
         done
         echo "MariaDB is up!"
 
-        # ── WordPress ──────────────────────────────────────────────────────────────────
+        # ── WordPress ──────────────────────────────────────────────────────────
         docker run --name wordpress \
         --network wordpress-network \
         -p 8080:80 \
@@ -65,7 +67,7 @@ case $1 in
         " \
         -d $WORDPRESS_DOCKER_IMAGE
 
-        # ── Wait for WordPress ─────────────────────────────────────────────────────────
+        # ── Wait for WordPress ─────────────────────────────────────────────────
         echo "Waiting for WordPress to initialize..."
         until docker exec wordpress curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -qE "^(200|301|302|404)"; do
         echo "  WordPress starting... retrying in 2s"
@@ -73,20 +75,21 @@ case $1 in
         done
         echo "WordPress is up!"
 
-        # ── Install WP-CLI ─────────────────────────────────────────────────────────────
+        # ── Install WP-CLI ─────────────────────────────────────────────────────
         echo "Installing WP-CLI..."
         docker exec wordpress curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
         docker exec wordpress chmod +x wp-cli.phar
         docker exec wordpress mv wp-cli.phar /usr/local/bin/wp
 
-        # ── Fix URLs ───────────────────
+        # ── Fix URLs ───────────────────────────────────────────────────────────
+        SITE_URL="https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
         echo "Updating site URL... to $SITE_URL"
         docker exec wordpress wp option update siteurl "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp option update home "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp config set WP_HOME "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp config set WP_SITEURL "$SITE_URL" --allow-root 2>/dev/null || true
 
-        # ── Install WordPress (skips if already installed) ─────────────────────────────
+        # ── Install WordPress (skips if already installed) ─────────────────────
         docker exec wordpress wp core is-installed --allow-root 2>/dev/null || \
         (echo "Installing WordPress" && docker exec wordpress wp core install \
         --url="$SITE_URL" \
@@ -97,7 +100,7 @@ case $1 in
         --skip-email \
         --allow-root)
 
-        # ── Done ───────────────────────────────────────────────────────────────────────
+        # ── Done ────────────────────────────────────────────────────────────────
         echo ""
         echo "WordPress is ready!"
         echo "Plugin folder: wp-content/plugins/${PLUGIN_NAME}"
@@ -136,16 +139,50 @@ case $1 in
         ;;
 
     test-data)
-        # ── Install WordPress Test Data (skips if already installed) ─────────────────────────────
+        # ── Install WordPress Test Data  ─────────────────────────────────
         echo "Importing Theme Unit Test data..."
         docker exec wordpress wp plugin install wordpress-importer --activate --allow-root
         docker exec wordpress curl -L -f -o theme-test-data.xml https://raw.githubusercontent.com/WordPress/theme-test-data/master/themeunittestdata.wordpress.xml
         docker exec wordpress wp import theme-test-data.xml --authors=create --allow-root
         docker exec wordpress rm theme-test-data.xml
         ;;
-    
+
+    update)
+        # ── Check for script updates on GitHub  ───────────────────────────
+        echo "Checking for latest stable release..."
+
+        REPO="pjd199/wordpress-codespace"
+        API_URL="https://api.github.com/repos/$REPO/releases/latest"
+        LATEST_VERSION=$(curl -s $API_URL | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+        if [ -z "$LATEST_VERSION" ]; then
+            echo "Could not fetch version info. Skipping update check."
+            return
+        fi
+
+        if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "New Stable Release found: $LATEST_VERSION (You are on $CURRENT_VERSION)"
+            read -p "Do you want to upgrade to the latest stable version? (y/n): " update_confirm
+            
+            if [ "$update_confirm" = "y" ]; then
+                DOWNLOAD_URL="https://raw.githubusercontent.com/$REPO/$LATEST_VERSION/wordpress.sh"
+                if curl -L -o "$0.tmp" "$DOWNLOAD_URL"; then
+                    mv "$0.tmp" "$0"
+                    chmod +x "$0"
+                    echo "Successfully upgraded to $LATEST_VERSION! Please restart the script."
+                    exit 0
+                else
+                    echo "Download failed."
+                fi
+            fi
+        else
+            echo "You are running the latest stable version ($CURRENT_VERSION)."
+        fi
+        ;;
+
     *)
-    echo "Usage: ./dev.sh {start|stop|clean|test-data}"
-    exit 1
+        # ── Print usage  ─────────────────────────────────────────────────────
+        echo "Usage: ./dev.sh {start|stop|clean|test-data|update}"
+        exit 1
     ;;
 esac
