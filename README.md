@@ -21,7 +21,7 @@ chmod +x dev.sh
 
 ## Usage
 ```bash
-./dev.sh <command>
+./wordpress.sh <command>
 ```
 
 | Command | Description |
@@ -30,6 +30,7 @@ chmod +x dev.sh
 | `stop` | Stop running containers (data is preserved) |
 | `clean` | Stop and remove all containers, networks, and data |
 | `test-data` | Import the WordPress Theme Unit Test dataset |
+| `update` | Check for new versions of the script |
 
 ---
 
@@ -39,7 +40,7 @@ chmod +x dev.sh
 
 Start the Wordpress development environment.
 ```bash
-./dev.sh start
+./wordpress.sh start
 ```
 
 Once running, your site will be available at:
@@ -53,10 +54,10 @@ https://<CODESPACE_NAME>-8080.<GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN>
 
 Stops the running containers without deleting any data.
 ```bash
-./dev.sh stop
+./wordpress.sh stop
 ```
 
-Run `./dev.sh start` again to resume where you left off.
+Run `./wordpress.sh start` again to resume where you left off.
 
 ---
 
@@ -64,7 +65,7 @@ Run `./dev.sh start` again to resume where you left off.
 
 Permanently removes all containers, the Docker network, and the `./docker-data` directory (database + WordPress files).
 ```bash
-./dev.sh clean
+./wordpress.sh clean
 ```
 
 You will be prompted to confirm before anything is deleted.
@@ -75,10 +76,22 @@ You will be prompted to confirm before anything is deleted.
 
 Imports the official [WordPress Theme Unit Test data](https://github.com/WordPress/theme-test-data) into your site. Useful for testing your plugin against a realistic variety of posts, pages, menus, and media.
 ```bash
-./dev.sh test-data
+./wordpress.sh test-data
 ```
 
-> Run `./dev.sh start` first. This command installs the WordPress Importer plugin and imports the XML dataset.
+> Run `./wordpress.sh start` first. This command installs the WordPress Importer plugin and imports the XML dataset.
+
+---
+
+### `update`
+
+Check for new version of the script from GitHub, and prompt to update if required. Please note, updating the script
+may switch to newer versions of Wordpress or MariaDB.
+```bash
+./wordpress.sh update
+```
+
+> Run `./wordpress.sh start` first. This command installs the WordPress Importer plugin and imports the XML dataset.
 
 ---
 
