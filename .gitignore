@@ -1,5 +1,5 @@
 # Docker local data
-docker-data/
+.docker-data/
 
 # WordPress
 wp-config.php

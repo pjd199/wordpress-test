@@ -7,42 +7,50 @@ WORDPRESS_DOCKER_IMAGE="wordpress:6.9.4"
 WORDPRESS_USER="admin"
 WORDPRESS_PASSWORD="password"
 PLUGIN_NAME=$(basename "$GITHUB_REPOSITORY")
+DOCKER_DATA="$(pwd)/.docker-data"
 
 # ── Script Version ────────────────────────────────────────────────────────────
-CURRENT_VERSION="0.0.2"
+CURRENT_VERSION="6.9.4.3"
 
 case $1 in
   start)
         # ── Cleanup ────────────────────────────────────────────────────────────
-        docker stop wordpress wordpressdb 2>/dev/null || true
-        docker rm   wordpress wordpressdb 2>/dev/null || true
+        if [ "$(docker ps -aq -f name=^wordpress$)" ]; then
+            echo "Cleaning up from previous start..."
+            docker stop wordpress wordpressdb 2>/dev/null || true
+            docker rm   wordpress wordpressdb 2>/dev/null || true
+            docker network rm wordpress-network 2>/dev/null || true
+        fi
 
         # ── Prep ───────────────────────────────────────────────────────────────
-        mkdir -p ./docker-data/mariadb ./docker-data/wordpress
+        mkdir -p $DOCKER_DATA/mariadb $DOCKER_DATA/wordpress
         docker network create wordpress-network 2>/dev/null || true
 
         # ── Database ───────────────────────────────────────────────────────────
+        echo "Starting MariaDB Docker image ${MARIADB_DOCKER_IMAGE}..."
         docker run --name wordpressdb \
         --network wordpress-network \
         -e MYSQL_ROOT_PASSWORD=root \
         -e MYSQL_DATABASE=wordpress \
-        -v "$(pwd)/docker-data/mariadb:/var/lib/mysql" \
+        -v "${DOCKER_DATA}/mariadb:/var/lib/mysql" \
         -d $MARIADB_DOCKER_IMAGE
 
 
         # ── Wait for MySQL ─────────────────────────────────────────────────────
-        echo "Waiting for MariaDB to initialize..."
+        printf "Waiting for MariaDB to start..."
         until docker exec wordpressdb mariadb -uroot -proot -e "SELECT 1" &>/dev/null; do
-        echo "  MariaDB starting... retrying in 2s"
-        sleep 2
+            printf "."
+            sleep 1
         done
+        echo ""
         echo "MariaDB is up!"
 
         # ── WordPress ──────────────────────────────────────────────────────────
+        echo "Starting Wordpress Docker image ${WORDPRESS_DOCKER_IMAGE}..."
         docker run --name wordpress \
         --network wordpress-network \
         -p 8080:80 \
-        -v "$(pwd)/docker-data/wordpress:/var/www/html" \
+        -v "${DOCKER_DATA}/wordpress:/var/www/html" \
         -v "$(pwd):/var/www/html/wp-content/plugins/${PLUGIN_NAME}" \
         -e WORDPRESS_DB_HOST=wordpressdb \
         -e WORDPRESS_DB_USER=root \
@@ -68,28 +76,31 @@ case $1 in
         -d $WORDPRESS_DOCKER_IMAGE
 
         # ── Wait for WordPress ─────────────────────────────────────────────────
-        echo "Waiting for WordPress to initialize..."
+        printf "Waiting for WordPress to start..."
         until docker exec wordpress curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -qE "^(200|301|302|404)"; do
-        echo "  WordPress starting... retrying in 2s"
-        sleep 2
+            printf "."
+            sleep 1
         done
+        echo ""
         echo "WordPress is up!"
 
         # ── Install WP-CLI ─────────────────────────────────────────────────────
-        echo "Installing WP-CLI..."
-        docker exec wordpress curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-        docker exec wordpress chmod +x wp-cli.phar
-        docker exec wordpress mv wp-cli.phar /usr/local/bin/wp
+        if ! docker exec wordpress command -v wp >/dev/null 2>&1; then
+            echo "Installing WP-CLI..."
+            docker exec wordpress curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+            docker exec wordpress chmod +x wp-cli.phar
+            docker exec wordpress mv wp-cli.phar /usr/local/bin/wp
+        fi
 
         # ── Fix URLs ───────────────────────────────────────────────────────────
         SITE_URL="https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
-        echo "Updating site URL... to $SITE_URL"
+        echo "Updating site URL to $SITE_URL"
         docker exec wordpress wp option update siteurl "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp option update home "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp config set WP_HOME "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp config set WP_SITEURL "$SITE_URL" --allow-root 2>/dev/null || true
 
-        # ── Install WordPress (skips if already installed) ─────────────────────
+        # ── Install WordPress (if needed) ─────────────────────
         docker exec wordpress wp core is-installed --allow-root 2>/dev/null || \
         (echo "Installing WordPress" && docker exec wordpress wp core install \
         --url="$SITE_URL" \
@@ -102,16 +113,18 @@ case $1 in
 
         # ── Done ────────────────────────────────────────────────────────────────
         echo ""
-        echo "WordPress is ready!"
-        echo "Plugin folder: wp-content/plugins/${PLUGIN_NAME}"
+        echo "WordPress is ready!"        
         echo "Visit: ${SITE_URL}"
         echo "Username: ${WORDPRESS_USER}"
         echo "Password: ${WORDPRESS_PASSWORD}"
+        echo "Plugin folder: wp-content/plugins/${PLUGIN_NAME}"
         ;;
     
     stop)
         echo "Stopping..."
         docker stop wordpress wordpressdb 2>/dev/null || true
+        docker rm   wordpress wordpressdb 2>/dev/null || true
+        docker network rm wordpress-network 2>/dev/null || true
         ;;
 
     clean)
@@ -132,7 +145,7 @@ case $1 in
         docker network rm wordpress-network 2>/dev/null || true
 
         echo "Removing WordPress and database files..."
-        sudo rm -rf ./docker-data
+        sudo rm -rf $DOCKER_DATA
 
         echo ""
         echo "Done! Run ./start.sh to start fresh."
@@ -182,7 +195,7 @@ case $1 in
 
     *)
         # ── Print usage  ─────────────────────────────────────────────────────
-        echo "Usage: ./dev.sh {start|stop|clean|test-data|update}"
+        echo "Usage: $0 {start|stop|clean|test-data|update}"
         exit 1
     ;;
 esac
