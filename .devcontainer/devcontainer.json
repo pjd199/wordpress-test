@@ -1,11 +1,11 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/php
 {
   "name": "WordPress Development Codespace",
-  "postCreateCommand": "chmod +x wordpress.sh",
-  "postStartCommand": "bash wordpress.sh start",
+  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-test/6.9.4.3/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
+  "postStartCommand": "wpc start",
   "forwardPorts": [8080],
   "portsAttributes": {
-    "8080": { "label": "WordPress", "onAutoForward": "openBrowserOnce" }
+    "8080": { 
+        "label": "WordPress", 
+        "onAutoForward": "openBrowserOnce" }
   }
 }
