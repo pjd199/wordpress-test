@@ -1,4 +1,4 @@
-# WordPress Codespaces Plugin Dev Environment
+# WordPress in Codespace
 
 A single script to spin up a local WordPress development environment using Docker inside a Codespace, with your plugin automatically mounted and ready to go.
 
