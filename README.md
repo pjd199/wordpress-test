@@ -1,6 +1,6 @@
-# WordPress Codespaces Plugin Dev Environment
+# WordPress in Codespace
 
-A single script to spin up a local WordPress development environment using Docker inside a Codespace, with your plugin automatically mounted and ready to go.
+A single script to spin up a local WordPress development environment using Docker inside a Codespace, with an option to mount your repository root as either a plugin or a theme.
 
 ---
 
@@ -13,23 +13,23 @@ A single script to spin up a local WordPress development environment using Docke
 
 ## Installation
 
-### Manual Install
+### Manual Installation
 Download wpc.sh into your codespace and give it execute permissions.
 
 ```bash
 # Download the specific release to /usr/local/bin
-sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.2/wordpress.sh
+sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.2/wpc.sh
 
 # Make it executable
 sudo chmod +x /usr/local/bin/wpc
 ```
 
-### Automatic install with .devcontainer
+### Automatic Installation with .devcontainer
 Add these postCreateCommands and postStartCommands .devcontainer/.devcontainer.json in your reposiroty
 ```json
 {
   "name": "WordPress Development Codespace",
-  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.2/wordpress.sh && sudo chmod +x /usr/local/bin/wpc",
+  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.2/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
   "postStartCommand": "wpc start",
   "forwardPorts": [8080],
   "portsAttributes": {
@@ -40,12 +40,12 @@ Add these postCreateCommands and postStartCommands .devcontainer/.devcontainer.j
 }
 ```
 
-To map your git repository as either a plugin or theme into WordPress,
-add either --plugin or --theme to the "wpc start" command.
+To automatically map your git repository as either a plugin or theme into WordPress,
+change the postStartCommand to either `wpc start --plugin` or `wpc start --theme`.
 
 
 ### Add to .gitignore
-Add the ".docker-data" directory to your .gitignore file.
+Add the `.docker-data` directory to your .gitignore file.
 
 ## Usage
 ```bash
@@ -58,6 +58,7 @@ wpc <command>
 | `stop` | Stop running containers (data is preserved) |
 | `clean` | Stop and remove all containers, networks, and data |
 | `test-data` | Import the WordPress Theme Unit Test dataset |
+| `update` | Check for new versions of the script |
 
 ---
 
