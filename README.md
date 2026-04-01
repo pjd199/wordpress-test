@@ -18,7 +18,7 @@ Download wpc.sh into your codespace and give it execute permissions.
 
 ```bash
 # Download the specific release to /usr/local/bin
-sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/6.9.4.3/wpc.sh
+sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/6.9.4+4/wpc.sh
 
 # Make it executable
 sudo chmod +x /usr/local/bin/wpc
@@ -29,7 +29,7 @@ Add these postCreateCommands and postStartCommands .devcontainer/.devcontainer.j
 ```json
 {
   "name": "WordPress Development Codespace",
-  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/6.9.4.3/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
+  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/6.9.4/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
   "postStartCommand": "wpc start",
   "forwardPorts": [8080],
   "portsAttributes": {
