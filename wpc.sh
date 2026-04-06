@@ -2,14 +2,14 @@
 set -e
 
 # ── Script Metadata ────────────────────────────────────────────────────────────
-CURRENT_VERSION="6.9.4+4"
+CURRENT_VERSION="0.0.3"
 AUTHOR="pjd199"
 SOURCE_URI="https://github.com/pjd199/wordpress-codespace"
 LICENSE="MIT"
 
 # ── Settings ───────────────────────────────────────────────────────────────────
-MARIADB_DOCKER_IMAGE="mariadb:11.8"
-WORDPRESS_DOCKER_IMAGE="wordpress:6.9.4-php8.2-apache"
+MARIADB_DOCKER_IMAGE="mariadb:lts"
+WORDPRESS_DOCKER_IMAGE="wordpress:latest"
 WORDPRESS_USER="admin"
 WORDPRESS_PASSWORD="password"
 PLUGIN_NAME=$(basename "$GITHUB_REPOSITORY")
@@ -147,6 +147,9 @@ case $1 in
         " \
         -d $WORDPRESS_DOCKER_IMAGE
 
+        echo "Fixing file permissions..."
+        sudo chmod -R 777 .docker-data
+
         # ── Wait for WordPress ─────────────────────────────────────────────────
         wait_for_container "WordPress" "docker exec wordpress curl -s -o /dev/null -w '%{http_code}' http://localhost | grep -qE '^(200|301|302|404)'"
 
@@ -207,6 +210,7 @@ case $1 in
         echo ""
         echo "Stopping and removing containers..."
         stop_containers
+        docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "wordpress|mariadb")
 
         echo "Removing network..."
         docker network rm wordpress-network 2>/dev/null || true
