@@ -2,7 +2,7 @@
 set -e
 
 # ── Script Metadata ────────────────────────────────────────────────────────────
-CURRENT_VERSION="0.0.5"
+CURRENT_VERSION="0.0.6"
 AUTHOR="pjd199"
 SOURCE_URI="https://github.com/pjd199/wordpress-codespace"
 LICENSE="MIT"
