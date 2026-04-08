@@ -1,10 +1,10 @@
 {
   "name": "WordPress Development Codespace",
-  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-test/0.0.3/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
+  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.4/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
   "postStartCommand": "wpc start",
-  "forwardPorts": [8080],
+  "forwardPorts": [80],
   "portsAttributes": {
-    "8080": { 
+    "80": { 
         "label": "WordPress", 
         "onAutoForward": "openBrowserOnce" }
   }

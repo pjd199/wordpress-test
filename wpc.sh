@@ -2,18 +2,25 @@
 set -e
 
 # ── Script Metadata ────────────────────────────────────────────────────────────
-CURRENT_VERSION="0.0.3"
+CURRENT_VERSION="0.0.4"
 AUTHOR="pjd199"
 SOURCE_URI="https://github.com/pjd199/wordpress-codespace"
 LICENSE="MIT"
 
+# ── Codespaces Check  ──────────────────────────────────────────────────────────
+if [ -z "$CODESPACE_NAME" ] || [ -z "$GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN" ] || [ -z "$GITHUB_REPOSITORY" ]; then
+    echo "Error: This script is designed to run inside GitHub Codespaces." >&2
+    echo "CODESPACE_NAME, GITHUB_REPOSITORY and GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN must be set." >&2
+    exit 1
+fi
+
 # ── Settings ───────────────────────────────────────────────────────────────────
-MARIADB_DOCKER_IMAGE="mariadb:lts"
-WORDPRESS_DOCKER_IMAGE="wordpress:latest"
-WORDPRESS_USER="admin"
-WORDPRESS_PASSWORD="password"
-PLUGIN_NAME=$(basename "$GITHUB_REPOSITORY")
-DOCKER_DATA="$(pwd)/.docker-data"
+WPC_DB_IMAGE=${WPC_DB_IMAGE:-"mariadb:lts"}
+WPC_WP_IMAGE=${WPC_WP_IMAGE:-"wordpress:latest"}
+WPC_USERNAME=${WPC_USERNAME:-"admin"}
+WPC_PASSWORD=${WPC_PASSWORD:-"password"}
+WPC_PLUGIN_NAME=${WPC_PLUGIN_NAME:-$(basename "$GITHUB_REPOSITORY")}
+WPC_DIR=${WPC_DIR:-"/workspaces/${GITHUB_REPOSITORY#*/}/.wpc"}
 
 # ── Dependency Checks ──────────────────────────────────────────────────────────
 if ! command -v docker &>/dev/null; then
@@ -25,18 +32,6 @@ fi
 if ! docker info &>/dev/null; then
     echo "Error: Docker daemon is not running." >&2
     echo "Start Docker and try again." >&2
-    exit 1
-fi
-
-if [ -z "$CODESPACE_NAME" ] || [ -z "$GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN" ]; then
-    echo "Error: This script is designed to run inside GitHub Codespaces." >&2
-    echo "CODESPACE_NAME and GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN must be set." >&2
-    exit 1
-fi
-
-if [ -z "$GITHUB_REPOSITORY" ]; then
-    echo "Error: GITHUB_REPOSITORY is not set." >&2
-    echo "This script must be run inside a GitHub Codespace with a repository." >&2
     exit 1
 fi
 
@@ -101,29 +96,29 @@ case $1 in
         fi
 
         # ── Prep ───────────────────────────────────────────────────────────────
-        mkdir -p $DOCKER_DATA/mariadb $DOCKER_DATA/wordpress
+        mkdir -p $WPC_DIR/mariadb $WPC_DIR/wordpress
         docker network create wordpress-network 2>/dev/null || true
 
         # ── Database ───────────────────────────────────────────────────────────
-        echo "Starting MariaDB Docker image ${MARIADB_DOCKER_IMAGE}..."
+        echo "Starting MariaDB Docker image ${WPC_DB_IMAGE}..."
         docker run --name wordpressdb \
         --network wordpress-network \
         -e MYSQL_ROOT_PASSWORD=root \
         -e MYSQL_DATABASE=wordpress \
-        -v "${DOCKER_DATA}/mariadb:/var/lib/mysql" \
-        -d $MARIADB_DOCKER_IMAGE
+        -v "${WPC_DIR}/mariadb:/var/lib/mysql" \
+        -d $WPC_DB_IMAGE
 
 
         # ── Wait for MySQL ─────────────────────────────────────────────────────
         wait_for_container "MariaDB" "docker exec wordpressdb mariadb -uroot -proot -e 'SELECT 1'"
 
         # ── WordPress ──────────────────────────────────────────────────────────
-        echo "Starting Wordpress Docker image ${WORDPRESS_DOCKER_IMAGE}..."
+        echo "Starting Wordpress Docker image ${WPC_WP_IMAGE}..."
         docker run --name wordpress \
         --network wordpress-network \
-        -p 8080:80 \
-        -v "${DOCKER_DATA}/wordpress:/var/www/html" \
-        -v "$(pwd):/var/www/html/wp-content/plugins/${PLUGIN_NAME}" \
+        -p 80:80 \
+        -v "${WPC_DIR}/wordpress:/var/www/html" \
+        -v "$(pwd):/var/www/html/wp-content/plugins/${WPC_PLUGIN_NAME}" \
         -e WORDPRESS_DB_HOST=wordpressdb \
         -e WORDPRESS_DB_USER=root \
         -e WORDPRESS_DB_PASSWORD=root \
@@ -138,17 +133,17 @@ case $1 in
             \$codespace_domain = getenv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN');
 
             if (\$codespace_name && \$codespace_domain) {
-                \$site_url = 'https://' . \$codespace_name . '-8080.' . \$codespace_domain;
+                \$site_url = 'https://' . \$codespace_name . '-80.' . \$codespace_domain;
                 define('WP_HOME',    \$site_url);
                 define('WP_SITEURL', \$site_url);
             }
 
             define('FORCE_SSL_ADMIN', true);
         " \
-        -d $WORDPRESS_DOCKER_IMAGE
+        -d $WPC_WP_IMAGE
 
         echo "Fixing file permissions..."
-        sudo chmod -R 777 .docker-data
+        sudo chmod -R 777 $WPC_DIR
 
         # ── Wait for WordPress ─────────────────────────────────────────────────
         wait_for_container "WordPress" "docker exec wordpress curl -s -o /dev/null -w '%{http_code}' http://localhost | grep -qE '^(200|301|302|404)'"
@@ -162,7 +157,7 @@ case $1 in
         fi
 
         # ── Fix URLs ───────────────────────────────────────────────────────────
-        SITE_URL="https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
+        SITE_URL="https://${CODESPACE_NAME}-80.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
         echo "Updating site URL to $SITE_URL"
         docker exec wordpress wp option update siteurl "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp option update home "$SITE_URL" --allow-root 2>/dev/null || true
@@ -174,20 +169,20 @@ case $1 in
         (echo "Installing WordPress" && docker exec wordpress wp core install \
         --url="$SITE_URL" \
         --title="WordPress Test" \
-        --admin_user=$WORDPRESS_USER \
-        --admin_password=$WORDPRESS_PASSWORD \
+        --admin_user=$WPC_USERNAME \
+        --admin_password=$WPC_PASSWORD \
         --admin_email="admin@example.com" \
         --skip-email \
         --allow-root)
 
         # ── Done ────────────────────────────────────────────────────────────────
         echo ""
-        echo "WordPress is ready!"        
+        echo "WordPress is ready!"  
         echo "Visit: ${SITE_URL}"
-        echo "Username: ${WORDPRESS_USER}"
-        echo "Password: ${WORDPRESS_PASSWORD}"
-        echo "Plugin folder: wp-content/plugins/${PLUGIN_NAME}"
-    
+        echo "Username: ${WPC_USERNAME}"
+        echo "Password: ${WPC_PASSWORD}"
+        echo "Plugin mounted at: $WPC_DIR/wordpress/wp-content/plugins/${WPC_PLUGIN_NAME}"
+
         check_for_updates
         ;;
 
@@ -199,7 +194,7 @@ case $1 in
         ;;
 
     clean)
-        echo "This will permanently delete all WordPress and database files."
+        echo "This will permanently delete all WordPress and database files at $WPC_DIR"
         read -p "Are you sure? (yes/no): " CONFIRM
 
         if [ "$CONFIRM" != "yes" ]; then
@@ -210,13 +205,13 @@ case $1 in
         echo ""
         echo "Stopping and removing containers..."
         stop_containers
-        docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "wordpress|mariadb")
+        docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "wordpress|mariadb" | xargs -r docker rmi
 
         echo "Removing network..."
         docker network rm wordpress-network 2>/dev/null || true
 
         echo "Removing WordPress and database files..."
-        sudo rm -rf $DOCKER_DATA
+        sudo rm -rf $WPC_DIR
 
         echo ""
         echo "Done! Run ./start.sh to start fresh."
@@ -246,6 +241,7 @@ case $1 in
         echo "Checking for latest stable release..."
         
         check_for_updates
+        echo ""
 
         if [ -z "$LATEST_VERSION" ]; then
             echo "Could not fetch version info. Skipping update check."
@@ -258,9 +254,9 @@ case $1 in
             
             if [ "$update_confirm" = "y" ]; then
                 DOWNLOAD_URL="https://raw.githubusercontent.com/$REPO/$LATEST_VERSION/wordpress.sh"
-                if curl -L -o "$0.tmp" "$DOWNLOAD_URL"; then
-                    mv "$0.tmp" "$0"
-                    chmod +x "$0"
+                if sudo curl -L -o "$0.tmp" "$DOWNLOAD_URL"; then
+                    sudo mv "$0.tmp" "$0"
+                    sudo chmod +x "$0"
                     echo "Successfully upgraded to $LATEST_VERSION! Please restart the script."
                     exit 0
                 else
@@ -289,11 +285,11 @@ case $1 in
         echo ""
         echo "── Site ─────────────────────────────────────────────────────────────"
         if is_wordpress_running; then
-            SITE_URL="https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
+            SITE_URL="https://${CODESPACE_NAME}-80.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
             echo "  URL:        ${SITE_URL}"
-            echo "  Username:   ${WORDPRESS_USER}"
-            echo "  Password:   ${WORDPRESS_PASSWORD}"
-            echo "  Plugin:     wp-content/plugins/${PLUGIN_NAME}"
+            echo "  Username:   ${WPC_USERNAME}"
+            echo "  Password:   ${WPC_PASSWORD}"
+            echo "  Plugin:     wp-content/plugins/${WPC_PLUGIN_NAME}"
         else
             echo "  Not available (WordPress is not running)"
         fi
