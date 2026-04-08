@@ -43,7 +43,7 @@ check_for_updates() {
 
     if [ "$1" != "quiet" ]; then
         if [ -z "$LATEST_VERSION" ]; then
-            echo ">>> Could not check for updates."
+            echo ">>> Could not check for updates. Please try again later."
         elif [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
             echo ">>> Update available: $LATEST_VERSION (you are on $CURRENT_VERSION)"
             echo ">>> Run {$0} update to upgrade."
@@ -246,7 +246,7 @@ case $1 in
 
         if [ -z "$LATEST_VERSION" ]; then
             echo "Could not fetch version info. Skipping update check."
-            return
+            exit
         fi
 
         if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
