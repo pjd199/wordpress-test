@@ -254,7 +254,7 @@ case $1 in
             read -p "Do you want to upgrade to the latest stable version? (y/n): " update_confirm
             
             if [ "$update_confirm" = "y" ]; then
-                DOWNLOAD_URL="https://raw.githubusercontent.com/$REPO/$LATEST_VERSION/wordpress.sh"
+                DOWNLOAD_URL="https://raw.githubusercontent.com/$REPO/$LATEST_VERSION/wpc.sh"
                 if sudo curl -L -o "$0.tmp" "$DOWNLOAD_URL"; then
                     sudo mv "$0.tmp" "$0"
                     sudo chmod +x "$0"
