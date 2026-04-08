@@ -18,7 +18,7 @@ Download wpc.sh into your codespace and give it execute permissions.
 
 ```bash
 # Download the specific release to /usr/local/bin
-sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.3/wpc.sh
+sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.4/wpc.sh
 
 # Make it executable
 sudo chmod +x /usr/local/bin/wpc

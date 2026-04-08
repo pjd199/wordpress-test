@@ -2,7 +2,7 @@
 set -e
 
 # ── Script Metadata ────────────────────────────────────────────────────────────
-CURRENT_VERSION="0.0.4"
+CURRENT_VERSION="0.0.5"
 AUTHOR="pjd199"
 SOURCE_URI="https://github.com/pjd199/wordpress-codespace"
 LICENSE="MIT"
@@ -142,9 +142,6 @@ case $1 in
         " \
         -d $WPC_WP_IMAGE
 
-        echo "Fixing file permissions..."
-        sudo chmod -R 777 $WPC_DIR
-
         # ── Wait for WordPress ─────────────────────────────────────────────────
         wait_for_container "WordPress" "docker exec wordpress curl -s -o /dev/null -w '%{http_code}' http://localhost | grep -qE '^(200|301|302|404)'"
 
@@ -174,6 +171,10 @@ case $1 in
         --admin_email="admin@example.com" \
         --skip-email \
         --allow-root)
+
+        # ── Fix file permissions ───────────────────────────────────────────────────
+        echo "Fixing file permissions..."
+        sudo chmod -R 777 $WPC_DIR
 
         # ── Done ────────────────────────────────────────────────────────────────
         echo ""
