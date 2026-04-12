@@ -2,7 +2,7 @@
 set -e
 
 # ── Script Metadata ────────────────────────────────────────────────────────────
-CURRENT_VERSION="0.0.6"
+CURRENT_VERSION="0.0.7"
 AUTHOR="pjd199"
 SOURCE_URI="https://github.com/pjd199/wordpress-codespace"
 LICENSE="MIT"
@@ -90,10 +90,8 @@ is_database_running() {
 case $1 in
   start)
         # ── Cleanup ────────────────────────────────────────────────────────────
-        if is_wordpress_running || is_database_running; then
-            echo "Cleaning up from previous start..."
-            stop_containers
-        fi
+        echo "Cleaning up from previous start..."
+        stop_containers
 
         # ── Prep ───────────────────────────────────────────────────────────────
         mkdir -p $WPC_DIR/mariadb $WPC_DIR/wordpress
